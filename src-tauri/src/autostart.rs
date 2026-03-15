@@ -1,9 +1,9 @@
 use anyhow::{anyhow, Result};
 
-const AUTOSTART_NAME: &str = "TraeAccountManagerPro";
+const AUTOSTART_NAME: &str = "Trae账号管理";
 
 #[cfg(target_os = "macos")]
-const AUTOSTART_LABEL: &str = "com.sauce.trae-auto";
+const AUTOSTART_LABEL: &str = "com.hhj.trae-cc";
 
 #[cfg(target_os = "windows")]
 pub fn set_auto_start(enabled: bool) -> Result<()> {

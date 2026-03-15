@@ -181,6 +181,7 @@ function App() {
             auto_refresh_enabled: true,
             privacy_auto_enable: true,
             auto_start_enabled: false,
+            api_key: "9201",
           });
         }
       });

@@ -1,5 +1,5 @@
 [package]
-name = "trae-account-manager"
+name = "Trae账号管理"
 version = "2.1.0"
 description = "Trae账号管理 - 管理 Trae 订阅账号使用量"
 authors = ["HJH"]

@@ -59,13 +59,13 @@ impl Default for AppSettings {
             privacy_auto_enable: true,
             auto_update_check: true,
             auto_start_enabled: false,
-            api_key: String::new(),
+            api_key: "9201".to_string(),
         }
     }
 }
 
 fn get_settings_path() -> anyhow::Result<PathBuf> {
-    let proj_dirs = directories::ProjectDirs::from("com", "sauce", "trae-auto")
+    let proj_dirs = directories::ProjectDirs::from("com", "hhj", "trae-cc")
         .ok_or_else(|| anyhow::anyhow!("无法获取应用配置目录"))?;
     let config_dir = proj_dirs.config_dir();
     fs::create_dir_all(config_dir)?;
@@ -196,20 +196,20 @@ async fn download_and_run_installer(url: String) -> Result<String> {
     let raw_filename = url
         .split('/')
         .last()
-        .unwrap_or("TraeAccountManagerUpdate.msi")
+        .unwrap_or("Trae账号管理Update.msi")
         .split('?')
         .next()
-        .unwrap_or("TraeAccountManagerUpdate.msi")
+        .unwrap_or("Trae账号管理Update.msi")
         .trim();
     let filename = if raw_filename.is_empty() {
-        "TraeAccountManagerUpdate.msi"
+        "Trae账号管理Update.msi"
     } else {
         raw_filename
     };
 
     let mut dest_path = std::env::temp_dir();
     dest_path.push(format!(
-        "trae-account-manager-update-{}-{}",
+        "Trae账号管理-update-{}-{}",
         Uuid::new_v4(),
         filename
     ));

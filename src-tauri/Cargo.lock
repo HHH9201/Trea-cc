@@ -3,6 +3,35 @@
 version = 4
 
 [[package]]
+name = "Trae账号管理"
+version = "2.1.0"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "chrono",
+ "core-foundation 0.10.1",
+ "directories",
+ "once_cell",
+ "open",
+ "regex",
+ "reqwest",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-deep-link",
+ "tauri-plugin-dialog",
+ "tauri-plugin-opener",
+ "thiserror 1.0.69",
+ "tokio",
+ "uuid",
+ "warp",
+ "windows-sys 0.59.0",
+ "winreg 0.52.0",
+]
+
+[[package]]
 name = "adler2"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4807,35 +4836,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "db97caf9d906fbde555dd62fa95ddba9eecfd14cb388e4f491a66d74cd5fb79a"
 dependencies = [
  "once_cell",
-]
-
-[[package]]
-name = "trae-account-manager"
-version = "2.1.0"
-dependencies = [
- "anyhow",
- "base64 0.22.1",
- "chrono",
- "core-foundation 0.10.1",
- "directories",
- "once_cell",
- "open",
- "regex",
- "reqwest",
- "rusqlite",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-deep-link",
- "tauri-plugin-dialog",
- "tauri-plugin-opener",
- "thiserror 1.0.69",
- "tokio",
- "uuid",
- "warp",
- "windows-sys 0.59.0",
- "winreg 0.52.0",
 ]
 
 [[package]]

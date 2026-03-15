@@ -38,7 +38,7 @@ impl AccountManager {
 
     /// 获取数据存储路径
     fn get_data_path() -> Result<PathBuf> {
-        let proj_dirs = directories::ProjectDirs::from("com", "sauce", "trae-auto")
+        let proj_dirs = directories::ProjectDirs::from("com", "hhj", "trae-cc")
             .ok_or_else(|| anyhow!("无法获取应用数据目录"))?;
 
         let data_dir = proj_dirs.data_dir();

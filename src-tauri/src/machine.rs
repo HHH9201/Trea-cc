@@ -244,7 +244,7 @@ pub fn kill_trae() -> Result<()> {
 
 /// 获取 Trae IDE 配置文件路径
 fn get_trae_config_path() -> Result<PathBuf> {
-    let proj_dirs = directories::ProjectDirs::from("com", "sauce", "trae-auto")
+    let proj_dirs = directories::ProjectDirs::from("com", "hhj", "trae-cc")
         .ok_or_else(|| anyhow!("无法获取应用数据目录"))?;
     let config_dir = proj_dirs.config_dir();
     fs::create_dir_all(config_dir)?;

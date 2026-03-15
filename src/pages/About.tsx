@@ -17,7 +17,7 @@ export function About() {
         <p className="about-desc">
           这是一款专为 Trae IDE 用户打造的多账号高效管理工具。通过本工具，您可以轻松管理多个 Trae 账号，一键切换账号，实时查看使用量，让您的 Trae IDE 使用体验更加便捷！基于
           <a
-            href="https://github.com/S-Trespassing/Trae-Account-Manager"
+            href="https://github.com/S-Trespassing/Trae账号管理"
             target="_blank"
             rel="noopener noreferrer"
             className="original-link"

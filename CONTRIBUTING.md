@@ -1,6 +1,6 @@
 # 🤝 贡献指南
 
-感谢您对 Trae Account Manager 项目的关注！我们欢迎并感谢所有形式的贡献。
+感谢您对 Trae账号管理 项目的关注！我们欢迎并感谢所有形式的贡献。
 
 ## 📋 目录
 
@@ -58,7 +58,7 @@
 ```bash
 # 克隆仓库
 git clone <your-repo-url>
-cd Trae-Account-Manager
+cd Trae账号管理
 
 # 安装前端依赖
 npm install
@@ -179,7 +179,7 @@ cargo clippy
 
 ## 🙏 感谢
 
-再次感谢您对 Trae Account Manager 的贡献！您的参与让这个项目变得更好。
+再次感谢您对 Trae账号管理 的贡献！您的参与让这个项目变得更好。
 
 ---
 
