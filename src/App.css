@@ -238,18 +238,18 @@
   align-items: center;
   justify-content: center;
   gap: 0;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   padding: 0;
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: 50%;
   color: var(--text-secondary);
   cursor: pointer;
   transition: all var(--transition);
   box-shadow: 
     0 2px 8px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .theme-btn span {
@@ -257,13 +257,12 @@
 }
 
 .theme-btn:hover {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.95);
   color: var(--accent);
   border-color: rgba(102, 126, 234, 0.3);
-  transform: translateY(-2px) rotate(15deg);
   box-shadow: 
-    0 4px 12px rgba(102, 126, 234, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    0 4px 12px rgba(102, 126, 234, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 .theme-btn svg {
@@ -364,32 +363,32 @@ body {
 .sidebar {
   width: calc(100% - 80px);
   max-width: 1400px;
-  height: 72px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+  height: 68px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 100%);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.7);
   border-radius: 999px;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  padding: 0 12px;
+  padding: 0 16px;
   z-index: 100;
-  margin: 20px auto;
+  margin: 16px auto;
   position: sticky;
-  top: 20px;
+  top: 16px;
   box-shadow: 
-    0 4px 24px rgba(0, 0, 0, 0.08),
-    0 1px 2px rgba(0, 0, 0, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
   transition: all var(--transition-slow);
 }
 
 .sidebar:hover {
   box-shadow: 
-    0 8px 32px rgba(102, 126, 234, 0.15),
-    0 1px 2px rgba(0, 0, 0, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    0 12px 40px rgba(102, 126, 234, 0.12),
+    0 4px 12px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 .sidebar-logo {
@@ -441,21 +440,21 @@ body {
 /* :root[class~="dark"] .logo-stroke { stroke: #a5b4fc; } */
 
 .sidebar-nav {
-  padding: 6px;
-  background: rgba(255, 255, 255, 0.5);
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-radius: 999px;
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   height: auto;
   justify-self: center;
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   box-shadow: 
-    inset 0 1px 2px rgba(0, 0, 0, 0.05),
-    0 1px 0 rgba(255, 255, 255, 0.8);
+    inset 0 1px 2px rgba(0, 0, 0, 0.04),
+    0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 [data-theme='dark'] .sidebar-nav,
@@ -468,7 +467,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 10px 32px;
+  padding: 10px 28px;
   cursor: pointer;
   transition: all var(--transition);
   color: var(--text-secondary);
@@ -478,13 +477,11 @@ body {
   font-size: 15px;
   position: relative;
   overflow: hidden;
-  letter-spacing: 0.3px;
 }
 
 .sidebar-item:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.8);
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .sidebar-item.active {
@@ -492,17 +489,15 @@ body {
   color: #ffffff;
   font-weight: 600;
   box-shadow: 
-    0 4px 16px rgba(102, 126, 234, 0.5),
+    0 4px 14px rgba(102, 126, 234, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  transform: translateY(-1px);
 }
 
 .sidebar-item.active:hover {
   background: var(--gradient-accent);
   color: #ffffff;
-  transform: translateY(-2px);
   box-shadow: 
-    0 6px 20px rgba(102, 126, 234, 0.6),
+    0 6px 18px rgba(102, 126, 234, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
@@ -517,11 +512,11 @@ body {
 }
 
 .sidebar-footer {
-  padding: 0 16px;
+  padding: 0;
   border-top: none;
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
   justify-self: end;
   margin-left: 0;
 }
@@ -942,7 +937,7 @@ body {
 
 .card-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-md);
   margin-bottom: var(--space-lg);
 }
@@ -1028,11 +1023,10 @@ body {
 }
 
 .card-status {
-  padding: 6px 12px;
-  border-radius: var(--radius-lg);
+  padding: 5px 12px;
+  border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.3px;
 }
 
 .card-status.normal {
@@ -1050,6 +1044,8 @@ body {
   display: flex;
   gap: var(--space-sm);
   margin-bottom: var(--space-lg);
+  flex-wrap: wrap;
+  min-height: 28px;
 }
 
 .tag {
@@ -1326,12 +1322,12 @@ body {
   transition: opacity var(--transition);
 }
 
-.card-footer svg {
-  opacity: 0.6;
-}
-
 .account-card:hover .card-footer {
   opacity: 1;
+}
+
+.card-footer svg {
+  opacity: 0.6;
 }
 
 /* Card Status Indicator */
