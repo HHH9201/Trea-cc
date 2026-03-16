@@ -42,7 +42,7 @@ export function AddAccountModal({
   // 快速注册进度状态
   const [registerProgress, setRegisterProgress] = useState(0);
   const [registerStatus, setRegisterStatus] = useState("");
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // 清理进度定时器
   useEffect(() => {

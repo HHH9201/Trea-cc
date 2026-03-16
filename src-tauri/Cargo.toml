@@ -1,6 +1,6 @@
 [package]
 name = "Trae账号管理"
-version = "1.0.0"
+version = "1.0.1"
 description = "Trae账号管理 - 管理 Trae 订阅账号使用量"
 authors = ["HJH"]
 edition = "2021"
