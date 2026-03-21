@@ -589,7 +589,7 @@ pub fn write_trae_login_info(info: &TraeLoginInfo) -> Result<()> {
 }
 
 /// 切换 Trae IDE 到指定账号（清除旧登录状态并写入新账号信息）
-pub fn switch_trae_account(info: &TraeLoginInfo, machine_id: Option<&str>) -> Result<()> {
+pub fn switch_trae_account(info: &TraeLoginInfo, machine_id: Option<&str>, auto_start: bool) -> Result<()> {
     // 0. 先关闭 Trae IDE
     kill_trae()?;
 
@@ -679,11 +679,8 @@ pub fn switch_trae_account(info: &TraeLoginInfo, machine_id: Option<&str>) -> Re
     obj.remove("iCubeServerData://icube.cloudide");
     obj.remove("iCubeAuthInfo://usertag");
 
-    // 更新 telemetry ID
-    let new_telemetry_id = format!("{:x}", md5_hash(&new_machine_id));
-    obj.insert("telemetry.machineId".to_string(), serde_json::Value::String(new_telemetry_id));
-    obj.insert("telemetry.sqmId".to_string(), serde_json::Value::String(format!("{{{}}}", Uuid::new_v4().to_string().to_uppercase())));
-    obj.insert("telemetry.devDeviceId".to_string(), serde_json::Value::String(Uuid::new_v4().to_string()));
+    // 注意：不在这里更新 telemetry ID，因为 Trae 启动时会根据 machineid 文件重新生成
+    // 我们只需要确保 machineid 文件正确即可
 
     // 写回文件
     let new_content = serde_json::to_string_pretty(&json)
@@ -696,9 +693,11 @@ pub fn switch_trae_account(info: &TraeLoginInfo, machine_id: Option<&str>) -> Re
 
     println!("[INFO] 已切换 Trae IDE 到账号: {}", info.email);
 
-    // 12. 自动打开 Trae IDE
-    if let Err(e) = open_trae() {
-        println!("[WARN] 自动打开 Trae IDE 失败: {}", e);
+    // 12. 自动打开 Trae IDE（仅在需要时）
+    if auto_start {
+        if let Err(e) = open_trae() {
+            println!("[WARN] 自动打开 Trae IDE 失败: {}", e);
+        }
     }
 
     Ok(())
@@ -730,11 +729,7 @@ pub fn clear_trae_login_state() -> Result<()> {
                 obj.remove("iCubeServerData://icube.cloudide");
                 obj.remove("iCubeAuthInfo://usertag");
 
-                // 重置遥测 ID
-                let new_telemetry_id = format!("{:x}", md5_hash(&new_machine_id));
-                obj.insert("telemetry.machineId".to_string(), serde_json::Value::String(new_telemetry_id));
-                obj.insert("telemetry.sqmId".to_string(), serde_json::Value::String(format!("{{{}}}", Uuid::new_v4().to_string().to_uppercase())));
-                obj.insert("telemetry.devDeviceId".to_string(), serde_json::Value::String(Uuid::new_v4().to_string()));
+                // 注意：不重置 telemetry ID，因为 Trae 启动时会根据 machineid 文件重新生成
 
                 // 写回文件
                 let new_content = serde_json::to_string_pretty(&json)

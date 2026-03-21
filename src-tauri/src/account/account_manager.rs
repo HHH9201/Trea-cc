@@ -571,8 +571,8 @@ impl AccountManager {
             region: if account.region.is_empty() { "SG".to_string() } else { account.region.clone() },
         };
 
-        // 切换 Trae IDE 到该账号（清除旧登录状态并写入新账号信息）
-        crate::machine::switch_trae_account(&login_info, account.machine_id.as_deref())?;
+        // 切换 Trae IDE 到该账号（清除旧登录状态并写入新账号信息，不自动启动）
+        crate::machine::switch_trae_account(&login_info, account.machine_id.as_deref(), false)?;
 
         // 如果账号有绑定的机器码，也更新系统机器码
         if let Some(machine_id) = &account.machine_id {

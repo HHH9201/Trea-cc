@@ -1033,28 +1033,71 @@ async fn switch_account(account_id: String, force: Option<bool>, state: State<'_
             Ok(path) => path,
             Err(err) => {
                 println!("[ERROR] 查找 Trae 数据库失败: {}", err);
+                // 即使查找数据库失败，也尝试启动 Trae
+                let _ = tokio::task::spawn_blocking(|| {
+                    let _ = machine::open_trae();
+                }).await;
                 return Ok(());
             }
         };
-        let result = tokio::task::spawn_blocking(move || {
-            let result = privacy::enable_privacy_mode_at_path_with_restart(db_path, || {
-                println!("[INFO] 正在重启 Trae IDE...");
-                machine::kill_trae()?;
-                machine::open_trae()
-            });
-            result
-        })
-        .await;
+        
+        // 先启动 Trae，等待数据库文件生成
+        let db_path_clone = db_path.clone();
+        let start_result = tokio::task::spawn_blocking(move || {
+            // 启动 Trae
+            if let Err(e) = machine::open_trae() {
+                println!("[ERROR] 启动 Trae IDE 失败: {}", e);
+                return Err(e);
+            }
+            
+            // 等待数据库文件存在（最多等待 30 秒）
+            let start = std::time::Instant::now();
+            let timeout = std::time::Duration::from_secs(30);
+            while !db_path_clone.exists() {
+                if start.elapsed() > timeout {
+                    return Err(anyhow::anyhow!("等待 Trae 数据库超时"));
+                }
+                std::thread::sleep(std::time::Duration::from_millis(200));
+            }
+            
+            Ok(())
+        }).await;
+        
+        match start_result {
+            Ok(Ok(())) => {
+                // Trae 启动成功，数据库文件已生成，现在写入隐私模式
+                let result = tokio::task::spawn_blocking(move || {
+                    privacy::enable_privacy_mode_at_path_with_restart(db_path, || {
+                        println!("[INFO] 正在重启 Trae IDE 以应用隐私模式...");
+                        machine::kill_trae()?;
+                        machine::open_trae()
+                    })
+                }).await;
 
-        match result {
-            Ok(Ok(_)) => {}
+                match result {
+                    Ok(Ok(_)) => {}
+                    Ok(Err(err)) => {
+                        println!("[ERROR] 自动开启隐私模式失败: {}", err);
+                    }
+                    Err(err) => {
+                        println!("[ERROR] 自动开启隐私模式任务失败: {}", err);
+                    }
+                }
+            }
             Ok(Err(err)) => {
-                println!("[ERROR] 自动开启隐私模式失败: {}", err);
+                println!("[ERROR] 启动 Trae IDE 失败: {}", err);
             }
             Err(err) => {
-                println!("[ERROR] 自动开启隐私模式任务失败: {}", err);
+                println!("[ERROR] 启动 Trae IDE 任务失败: {}", err);
             }
         }
+    } else {
+        // 隐私模式未启用，直接启动 Trae
+        let _ = tokio::task::spawn_blocking(|| {
+            if let Err(e) = machine::open_trae() {
+                println!("[WARN] 自动打开 Trae IDE 失败: {}", e);
+            }
+        }).await;
     }
 
     Ok(())

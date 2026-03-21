@@ -51,43 +51,6 @@ export function Stats({ accounts, hasLoaded = true }: StatsProps) {
     }
     return null;
   };
-  const aggregateStats = (statsList: UserStatisticData[]): UserStatisticData => {
-    const merged: UserStatisticData = {
-      UserID: "ALL",
-      RegisterDays: 0,
-      AiCnt365d: {},
-      CodeAiAcceptCnt7d: 0,
-      CodeAiAcceptDiffLanguageCnt7d: {},
-      CodeCompCnt7d: 0,
-      CodeCompDiffAgentCnt7d: {},
-      CodeCompDiffModelCnt7d: {},
-      IdeActiveDiffHourCnt7d: {},
-      DataDate: "",
-      IsIde: false
-    };
-    for (const stats of statsList) {
-      if (!stats) continue;
-      merged.RegisterDays = Math.max(merged.RegisterDays, stats.RegisterDays || 0);
-      merged.CodeAiAcceptCnt7d += stats.CodeAiAcceptCnt7d || 0;
-      merged.CodeCompCnt7d += stats.CodeCompCnt7d || 0;
-      merged.IsIde = merged.IsIde || !!stats.IsIde;
-      if (stats.DataDate && stats.DataDate > merged.DataDate) {
-        merged.DataDate = stats.DataDate;
-      }
-      const mergeMap = (target: Record<string, number>, source?: Record<string, number>) => {
-        if (!source) return;
-        Object.entries(source).forEach(([key, value]) => {
-          target[key] = (target[key] || 0) + (value || 0);
-        });
-      };
-      mergeMap(merged.AiCnt365d, stats.AiCnt365d);
-      mergeMap(merged.CodeAiAcceptDiffLanguageCnt7d, stats.CodeAiAcceptDiffLanguageCnt7d);
-      mergeMap(merged.CodeCompDiffAgentCnt7d, stats.CodeCompDiffAgentCnt7d);
-      mergeMap(merged.CodeCompDiffModelCnt7d, stats.CodeCompDiffModelCnt7d);
-      mergeMap(merged.IdeActiveDiffHourCnt7d, stats.IdeActiveDiffHourCnt7d);
-    }
-    return merged;
-  };
   const saveStatsCache = (accountId: string, data: UserStatisticData) => {
     try {
       localStorage.setItem(statsCacheKey(accountId), JSON.stringify({
@@ -101,7 +64,11 @@ export function Stats({ accounts, hasLoaded = true }: StatsProps) {
 
   useEffect(() => {
     let cancelled = false;
-    if (!accounts.length) {
+    
+    // 只获取当前登录账号的数据
+    const currentAccount = accounts.find(a => a.is_current);
+    
+    if (!currentAccount) {
       setUserStats(null);
       setLoadingStats(false);
       setStatsError(null);
@@ -111,79 +78,43 @@ export function Stats({ accounts, hasLoaded = true }: StatsProps) {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
-    // Load all caches
-    const cachedResults = accounts.map(account => {
-      const cache = loadStatsCache(account.id);
-      return { id: account.id, cache };
-    });
+    // Load cache for current account only
+    const cache = loadStatsCache(currentAccount.id);
 
     // Display valid cache immediately (even if stale)
-    const validCacheData = cachedResults
-      .map(r => r.cache?.data)
-      .filter(Boolean) as UserStatisticData[];
-
-    if (validCacheData.length > 0) {
-      setUserStats(aggregateStats(validCacheData));
+    if (cache?.data) {
+      setUserStats(cache.data);
       setLoadingStats(false); // We have data, so stop loading
     } else {
       setLoadingStats(true); // No data at all, show loading
     }
     setStatsError(null);
 
-    // Identify stale accounts (no cache or cache older than today 00:00)
-    const accountsToFetch = accounts.filter(account => {
-      const result = cachedResults.find(r => r.id === account.id);
-      if (!result?.cache) return true; // No cache
-      return result.cache.cachedAt < todayStart; // Stale cache
-    });
+    // Check if cache is stale (older than today 00:00)
+    const isStale = !cache || cache.cachedAt < todayStart;
 
-    if (accountsToFetch.length === 0) {
+    if (!isStale) {
       setLoadingStats(false);
-      return; // All fresh
+      return; // Cache is fresh
     }
 
-    // Fetch stale accounts in background
+    // Fetch current account data
     (async () => {
       try {
-        const results = await Promise.allSettled(
-          accountsToFetch.map(async (account) => {
-            const stats = await api.getUserStatistics(account.id);
-            saveStatsCache(account.id, stats);
-            return { id: account.id, stats };
-          })
-        );
+        console.log(`[Stats] 正在获取当前账号 ${currentAccount.id} 的统计数据...`);
+        const stats = await api.getUserStatistics(currentAccount.id);
+        saveStatsCache(currentAccount.id, stats);
         
         if (cancelled) return;
 
-        const freshStatsMap = new Map<string, UserStatisticData>();
-        results.forEach(res => {
-          if (res.status === "fulfilled") {
-            freshStatsMap.set(res.value.id, res.value.stats);
-          }
-        });
-
-        // Merge fresh data with existing fresh cache
-        const finalStatsList = accounts.map(account => {
-          if (freshStatsMap.has(account.id)) {
-            return freshStatsMap.get(account.id)!;
-          }
-          const cache = cachedResults.find(r => r.id === account.id)?.cache?.data;
-          return cache;
-        }).filter(Boolean) as UserStatisticData[];
-
-        if (finalStatsList.length > 0) {
-          setUserStats(aggregateStats(finalStatsList));
-          setStatsError(null);
-        } else {
-          // Only show error if we still have no data
-          if (!userStats) {
-             setStatsError("获取统计数据失败");
-          }
-        }
+        console.log(`[Stats] 成功获取当前账号统计数据:`, stats);
+        setUserStats(stats);
+        setStatsError(null);
       } catch (e: any) {
         if (cancelled) return;
+        console.error(`[Stats] 获取当前账号统计数据失败:`, e);
         // Only show error if we have no cached data to show
-        if (!validCacheData.length) {
+        if (!cache?.data) {
           setStatsError(e.message || "获取统计数据失败");
         }
       } finally {
@@ -195,7 +126,7 @@ export function Stats({ accounts, hasLoaded = true }: StatsProps) {
     return () => {
       cancelled = true;
     };
-  }, [accounts.map(a => a.id).join("|")]);
+  }, [accounts.find(a => a.is_current)?.id]); // Only re-run when current account changes
 
   return (
     <div className="dashboard">

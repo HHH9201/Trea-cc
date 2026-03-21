@@ -8,7 +8,7 @@ export function About() {
           <div className="about-header-text">
             <div className="title-row">
               <h1 className="about-title">Trae账号管理</h1>
-              <span className="version">v1.0</span>
+              <span className="version">v1.0.2</span>
             </div>
           </div>
         </div>

@@ -46,11 +46,11 @@ pub struct GetUserTokenResponse {
     pub result: UserTokenResult,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ResponseMetadata {
-    #[serde(rename = "RequestId")]
+    #[serde(rename = "RequestId", default)]
     pub request_id: String,
-    #[serde(rename = "TraceID")]
+    #[serde(rename = "TraceID", default)]
     pub trace_id: String,
 }
 
@@ -106,37 +106,37 @@ pub struct UserInfoResult {
 }
 
 /// 用户统计数据响应
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct GetUserStatisticResponse {
-    #[serde(rename = "ResponseMetadata")]
+    #[serde(rename = "ResponseMetadata", default)]
     pub response_metadata: ResponseMetadata,
-    #[serde(rename = "Result")]
+    #[serde(rename = "Result", default)]
     pub result: UserStatisticResult,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct UserStatisticResult {
-    #[serde(rename = "UserID")]
+    #[serde(rename = "UserID", default)]
     pub user_id: String,
-    #[serde(rename = "RegisterDays")]
+    #[serde(rename = "RegisterDays", default)]
     pub register_days: i32,
-    #[serde(rename = "AiCnt365d")]
+    #[serde(rename = "AiCnt365d", default)]
     pub ai_cnt_365d: std::collections::HashMap<String, i32>,
-    #[serde(rename = "CodeAiAcceptCnt7d")]
+    #[serde(rename = "CodeAiAcceptCnt7d", default)]
     pub code_ai_accept_cnt_7d: i32,
-    #[serde(rename = "CodeAiAcceptDiffLanguageCnt7d")]
+    #[serde(rename = "CodeAiAcceptDiffLanguageCnt7d", default)]
     pub code_ai_accept_diff_language_cnt_7d: std::collections::HashMap<String, i32>,
-    #[serde(rename = "CodeCompCnt7d")]
+    #[serde(rename = "CodeCompCnt7d", default)]
     pub code_comp_cnt_7d: i32,
-    #[serde(rename = "CodeCompDiffAgentCnt7d")]
+    #[serde(rename = "CodeCompDiffAgentCnt7d", default)]
     pub code_comp_diff_agent_cnt_7d: std::collections::HashMap<String, i32>,
-    #[serde(rename = "CodeCompDiffModelCnt7d")]
+    #[serde(rename = "CodeCompDiffModelCnt7d", default)]
     pub code_comp_diff_model_cnt_7d: std::collections::HashMap<String, i32>,
-    #[serde(rename = "IdeActiveDiffHourCnt7d")]
+    #[serde(rename = "IdeActiveDiffHourCnt7d", default)]
     pub ide_active_diff_hour_cnt_7d: std::collections::HashMap<String, i32>,
-    #[serde(rename = "DataDate")]
+    #[serde(rename = "DataDate", default)]
     pub data_date: String,
-    #[serde(rename = "IsIde")]
+    #[serde(rename = "IsIde", default)]
     pub is_ide: bool,
 }
 
