@@ -81,13 +81,13 @@ export function AccountListItem({ account, usage, selected, onSelect, onContextM
           <img src={account.avatar_url} alt={account.name} />
         ) : (
           <div className="avatar-placeholder">
-            {(account.email || account.name).charAt(0).toUpperCase()}
+            {(account.name || account.email).charAt(0).toUpperCase()}
           </div>
         )}
       </div>
 
       <div className="list-item-info">
-        <span className="list-item-email">{account.email || account.name}</span>
+        <span className="list-item-email">{account.name || account.email}</span>
         <span className="list-item-id">Trae 账号</span>
       </div>
 
@@ -121,7 +121,9 @@ export function AccountListItem({ account, usage, selected, onSelect, onContextM
                 style={{ width: `${Math.min(usagePercent, 100)}%`, background: getUsageColor() }}
               />
             </div>
-            <div className="dollar-left">剩 ${totalLeft.toFixed(2)}</div>
+            <div className={`dollar-left ${totalLeft < 0 ? 'negative' : ''}`}>
+              {totalLeft < 0 ? '超支' : '剩'} ${Math.abs(totalLeft).toFixed(2)}
+            </div>
           </div>
         ) : (
           // 普通模式

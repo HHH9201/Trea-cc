@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { UsageSummary } from "../types";
 
 interface AccountCardProps {
@@ -14,9 +15,11 @@ interface AccountCardProps {
   selected: boolean;
   onSelect: (id: string) => void;
   onContextMenu: (e: React.MouseEvent, id: string) => void;
+  onToast?: (type: "success" | "error" | "warning" | "info", message: string, duration?: number) => void;
 }
 
-export function AccountCard({ account, usage, selected, onSelect, onContextMenu }: AccountCardProps) {
+export function AccountCard({ account, usage, selected, onSelect, onContextMenu, onToast }: AccountCardProps) {
+  const [copied, setCopied] = useState(false);
   const getUsageLevel = (used: number, limit: number) => {
     if (limit === 0) return "low";
     const percent = (used / limit) * 100;
@@ -62,7 +65,12 @@ export function AccountCard({ account, usage, selected, onSelect, onContextMenu 
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(account.email || account.name);
+    const textToCopy = account.name || account.email;
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      onToast?.("success", `已复制用户名: ${textToCopy}`, 2000);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   };
 
   return (
@@ -99,11 +107,11 @@ export function AccountCard({ account, usage, selected, onSelect, onContextMenu 
 
         <div className="card-info">
           <div className="card-email">
-            <span className="email-text">{account.email || account.name}</span>
+            <span className="email-text">{account.name || account.email}</span>
             <button
               className="copy-btn"
               onClick={handleCopy}
-              title="复制邮箱"
+              title={copied ? "复制成功" : "复制用户名"}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
@@ -149,20 +157,24 @@ export function AccountCard({ account, usage, selected, onSelect, onContextMenu 
             />
           </div>
 
-          {/* 总额度数值 - 显示格式: $0.00 / 3.0 或 $0.00 / 3.0+3.0 */}
+          {/* 总额度数值 - 显示格式: $0.00 / 6.0 或 $0.00 / 3.0+3.0 */}
           <div className="usage-compact-total">
             <span className="usage-compact-used">${totalUsed.toFixed(2)}</span>
             <span className="usage-compact-limit">
               {" / "}
-              <span className="limit-basic">{usage.basic_dollar_limit.toFixed(1)}</span>
-              {usage.bonus_dollar_limit > 0 && (
+              {usage.bonus_dollar_limit > 0 ? (
                 <>
+                  <span className="limit-basic">{usage.basic_dollar_limit.toFixed(1)}</span>
                   <span className="limit-plus">+</span>
                   <span className="limit-bonus">{usage.bonus_dollar_limit.toFixed(1)}</span>
                 </>
+              ) : (
+                <span className="limit-basic">{usage.fast_dollar_limit.toFixed(1)}</span>
               )}
             </span>
-            <span className="usage-compact-left">剩 ${totalLeft.toFixed(2)}</span>
+            <span className={`usage-compact-left ${totalLeft < 0 ? 'negative' : ''}`}>
+              {totalLeft < 0 ? '超支' : '剩'} ${Math.abs(totalLeft).toFixed(2)}
+            </span>
           </div>
 
           {/* 只在有 Bonus 额度时显示赠送详情 */}

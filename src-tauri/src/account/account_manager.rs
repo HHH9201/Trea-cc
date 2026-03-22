@@ -544,7 +544,7 @@ impl AccountManager {
     }
 
     /// 切换账号（设置活跃账号并将登录信息写入 Trae IDE）
-    pub fn switch_account(&mut self, account_id: &str, force: bool) -> Result<()> {
+    pub async fn switch_account(&mut self, account_id: &str, force: bool) -> Result<()> {
         // 检查是否已经是当前使用的账号
         if !force && self.store.current_account_id.as_deref() == Some(account_id) {
             return Err(anyhow!("该账号已经是当前使用的账号"));
@@ -555,9 +555,60 @@ impl AccountManager {
             .ok_or_else(|| anyhow!("账号不存在"))?
             .clone();
 
-        // 检查账号是否有有效的 Token
-        let token = account.jwt_token.as_ref()
-            .ok_or_else(|| anyhow!("账号没有有效的 Token，无法切换"))?;
+        // 检查 Token 是否过期，如果过期则尝试刷新
+        let token = if let Some(token) = &account.jwt_token {
+            if let Some(expired_at) = &account.token_expired_at {
+                let expired = chrono::DateTime::parse_from_rfc3339(expired_at)
+                    .map(|dt| dt.with_timezone(&chrono::Utc) < chrono::Utc::now())
+                    .unwrap_or(true);
+                
+                if expired && !account.cookies.is_empty() {
+                    // Token 已过期，尝试使用 Cookies 刷新
+                    println!("[INFO] Token 已过期，尝试使用 Cookies 刷新...");
+                    let mut cookie_client = TraeApiClient::new(&account.cookies)?;
+                    match cookie_client.get_user_token().await {
+                        Ok(token_result) => {
+                            // 更新存储的 Token
+                            if let Some(acc) = self.store.accounts.iter_mut().find(|a| a.id == account_id) {
+                                acc.jwt_token = Some(token_result.token.clone());
+                                acc.token_expired_at = Some(token_result.expired_at.clone());
+                            }
+                            self.save_store()?;
+                            token_result.token
+                        }
+                        Err(e) => {
+                            return Err(anyhow!("Token 已过期且刷新失败: {}", e));
+                        }
+                    }
+                } else if expired {
+                    return Err(anyhow!("Token 已过期且没有 Cookies 可以刷新"));
+                } else {
+                    token.clone()
+                }
+            } else {
+                token.clone()
+            }
+        } else if !account.cookies.is_empty() {
+            // 没有 Token 但有 Cookies，尝试获取 Token
+            println!("[INFO] 没有 Token，尝试使用 Cookies 获取...");
+            let mut cookie_client = TraeApiClient::new(&account.cookies)?;
+            match cookie_client.get_user_token().await {
+                Ok(token_result) => {
+                    // 更新存储的 Token
+                    if let Some(acc) = self.store.accounts.iter_mut().find(|a| a.id == account_id) {
+                        acc.jwt_token = Some(token_result.token.clone());
+                        acc.token_expired_at = Some(token_result.expired_at.clone());
+                    }
+                    self.save_store()?;
+                    token_result.token
+                }
+                Err(e) => {
+                    return Err(anyhow!("获取 Token 失败: {}", e));
+                }
+            }
+        } else {
+            return Err(anyhow!("账号没有有效的 Token 或 Cookies，无法切换"));
+        };
 
         // 构建 Trae IDE 登录信息
         let login_info = crate::machine::TraeLoginInfo {
@@ -1225,9 +1276,16 @@ impl AccountManager {
             return Ok(None);
         }
 
-        // 使用 Token 获取完整的用户信息
+        // 使用 Token 获取完整的用户信息（带超时）
         let client = TraeApiClient::new_with_token(&token)?;
-        let user_info = client.get_user_info_by_token().await?;
+        let user_info = match tokio::time::timeout(
+            std::time::Duration::from_secs(10),
+            client.get_user_info_by_token()
+        ).await {
+            Ok(Ok(info)) => info,
+            Ok(Err(e)) => return Err(anyhow!("获取用户信息失败: {}", e)),
+            Err(_) => return Err(anyhow!("获取用户信息超时，请检查网络连接")),
+        };
 
         // 创建账号对象
         let mut account = Account::new(

@@ -87,3 +87,14 @@ trae_scripts/
 screenshots/
 test-results/
 playwright-report/
+
+# Root level test scripts (not needed in production)
+/check_quota.mjs
+/check_quota.py
+/check_quota_real.mjs
+/inspect_signup.cjs
+/test_trae_signup.mjs
+
+# Local database files
+*.db
+*.sqlite

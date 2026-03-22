@@ -133,7 +133,12 @@ pub async fn quick_register(
 
     // 关闭已存在的注册窗口
     if let Some(existing) = app.get_webview_window("trae-register") {
-        let _ = existing.close();
+        let _ = existing.destroy();
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    }
+    // 再次检查确保窗口已关闭
+    if app.get_webview_window("trae-register").is_some() {
+        return Err(anyhow::anyhow!("无法关闭已存在的注册窗口，请重启应用后重试").into());
     }
 
     println!("[quick-register] 创建浏览器窗口 (show_window={})...", show_window);
@@ -271,7 +276,7 @@ pub async fn quick_register(
 
     // ========== 步骤 5: 等待验证码邮件 ==========
     println!("[quick-register] 步骤 5/6: 等待验证码邮件...");
-    let code = match wait_for_verification_code(&mail_client, Duration::from_secs(60)).await {
+    let code = match wait_for_verification_code(&mail_client, &email, Duration::from_secs(60)).await {
         Ok(code) => code,
         Err(err) => {
             let _ = webview.close();

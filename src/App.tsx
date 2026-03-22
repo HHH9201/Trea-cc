@@ -36,6 +36,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState("accounts");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [emailFilter, setEmailFilter] = useState("");
+  const [quotaFilter, setQuotaFilter] = useState<"all" | "with" | "without">("all");
 
   // Toast 通知状态
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -334,29 +335,40 @@ function App() {
 
   const handleAccountAdded = useCallback(
     (account: Account) => {
+      console.log("[handleAccountAdded] 添加账号:", account.id, account.email);
+      
+      // 直接创建新账号对象
+      const nextAccount: AccountWithUsage = {
+        id: account.id,
+        name: account.name,
+        email: account.email,
+        avatar_url: account.avatar_url,
+        plan_type: account.plan_type,
+        is_active: account.is_active ?? true,
+        created_at: account.created_at,
+        machine_id: account.machine_id,
+        is_current: false,
+        usage: null,
+        password: account.password ?? null,
+      };
+      
       setAccounts((prev) => {
         const existing = prev.find((item) => item.id === account.id);
-        const nextAccount: AccountWithUsage = {
-          id: account.id,
-          name: account.name,
-          email: account.email,
-          avatar_url: account.avatar_url,
-          plan_type: account.plan_type,
-          is_active: account.is_active,
-          created_at: account.created_at,
-          machine_id: account.machine_id,
-          is_current: existing?.is_current ?? false,
-          usage: existing?.usage ?? null,
-          password: account.password ?? existing?.password ?? null,
-        };
+        console.log("[handleAccountAdded] 已存在:", !!existing, "当前列表长度:", prev.length);
         if (existing) {
-          return prev.map((item) => (item.id === account.id ? nextAccount : item));
+          console.log("[handleAccountAdded] 更新已有账号");
+          return prev.map((item) => (item.id === account.id ? { ...nextAccount, is_current: item.is_current, usage: item.usage } : item));
         }
+        console.log("[handleAccountAdded] 添加新账号到列表");
         return [...prev, nextAccount];
       });
       setError(null);
       setHasLoaded(true);
-      void handleRefreshAccount(account.id, { silent: true });
+      
+      // 延迟刷新账号信息
+      setTimeout(() => {
+        void handleRefreshAccount(account.id, { silent: true });
+      }, 100);
     },
     [handleRefreshAccount]
   );
@@ -732,9 +744,28 @@ function App() {
 
   const normalizedFilter = (emailFilter || "").trim().toLowerCase();
   const visibleAccounts = Array.isArray(accounts)
-    ? (normalizedFilter
-        ? accounts.filter((account) => (account.email || account.name || "").toLowerCase().includes(normalizedFilter))
-        : accounts)
+    ? [...accounts]
+        .filter((account) => {
+          // 邮箱搜索过滤
+          if (normalizedFilter && !(account.email || account.name || "").toLowerCase().includes(normalizedFilter)) {
+            return false;
+          }
+          // 额度筛选
+          if (quotaFilter === "with") {
+            // 有剩余额度：usage 存在且 fast_dollar_left > 0
+            return account.usage && account.usage.fast_dollar_left > 0;
+          } else if (quotaFilter === "without") {
+            // 无剩余额度：usage 不存在或 fast_dollar_left <= 0
+            return !account.usage || account.usage.fast_dollar_left <= 0;
+          }
+          return true;
+        })
+        .sort((a, b) => {
+          // 当前使用的账号排在最前面
+          if (a.is_current && !b.is_current) return -1;
+          if (!a.is_current && b.is_current) return 1;
+          return 0;
+        })
     : [];
 
   return (
@@ -785,6 +816,21 @@ function App() {
                         value={emailFilter}
                         onChange={(event) => setEmailFilter(event.target.value)}
                       />
+                    </div>
+                    <div className="quota-filter">
+                      <select
+                        className="quota-filter-select"
+                        value={quotaFilter}
+                        onChange={(e) => setQuotaFilter(e.target.value as "all" | "with" | "without")}
+                        title="额度筛选"
+                      >
+                        <option value="all">全部额度</option>
+                        <option value="with">有剩余额度</option>
+                        <option value="without">无剩余额度</option>
+                      </select>
+                      <svg className="quota-filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                        <polyline points="6 9 12 15 18 9"/>
+                      </svg>
                     </div>
                     <div className="view-toggle">
                       <button
@@ -846,22 +892,9 @@ function App() {
                     )}
                   </div>
                   <div className="toolbar-right">
-                    <button className="header-btn" onClick={handleImportAccounts} title="导入账号" style={{padding: '8px 14px'}}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
-                      </svg>
-                      导入
-                    </button>
-                    <button className="header-btn" onClick={handleExportAccounts} title="导出账号" disabled={accounts.length === 0} style={{padding: '8px 14px'}}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-                      </svg>
-                      导出
-                    </button>
                     <button className="add-btn" onClick={() => setShowAddModal(true)} style={{padding: '8px 16px', fontSize: '13px'}}>
                       <span>+</span> 添加账号
                     </button>
-
                   </div>
                 </div>
               )}
@@ -895,6 +928,7 @@ function App() {
                       selected={selectedIds.has(account.id)}
                       onSelect={handleSelectAccount}
                       onContextMenu={handleContextMenu}
+                      onToast={addToast}
                     />
                   ))}
                 </div>
@@ -1004,6 +1038,9 @@ function App() {
         onToast={addToast}
         onAccountAdded={handleAccountAdded}
         quickRegisterShowWindow={quickRegisterShowWindow}
+        onImportAccounts={handleImportAccounts}
+        onExportAccounts={handleExportAccounts}
+        canExport={accounts.length > 0}
       />
 
       {/* 详情弹窗 */}
@@ -1013,6 +1050,7 @@ function App() {
         account={detailAccount}
         usage={detailAccount?.usage || null}
         onUpdateCredentials={handleUpdateCredentials}
+        onToast={addToast}
       />
 
       <AccountLoginModal

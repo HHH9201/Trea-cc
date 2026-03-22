@@ -792,6 +792,7 @@ pub async fn login_with_email(email: &str, password: &str) -> Result<EmailLoginR
             .and_then(|v| v.as_str())
             .or_else(|| login_result.get("message").and_then(|v| v.as_str()))
             .unwrap_or("未知错误");
+        println!("[login_with_email] ❌ 登录失败，响应: {:?}", login_result);
         return Err(anyhow!("登录失败: {}", description));
     }
 

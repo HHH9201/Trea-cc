@@ -825,8 +825,14 @@ async fn start_browser_login(app: AppHandle, state: State<'_, AppState>) -> Resu
     let script_init = script.clone();
     let script_onload = script.clone();
 
+    // 关闭已存在的登录窗口
     if let Some(existing) = app.get_webview_window("trae-login") {
-        let _ = existing.close();
+        let _ = existing.destroy();
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    }
+    // 再次检查确保窗口已关闭
+    if app.get_webview_window("trae-login").is_some() {
+        return Err(anyhow::anyhow!("无法关闭已存在的登录窗口，请重启应用后重试").into());
     }
 
     let webview = WebviewWindowBuilder::new(&app, "trae-login", WebviewUrl::External("about:blank".parse().unwrap()))
@@ -993,9 +999,9 @@ async fn cancel_browser_login(app: AppHandle, state: State<'_, AppState>) -> Res
         if let Some(tx) = session.shutdown.lock().unwrap().take() {
             let _ = tx.send(());
         }
-        let _ = session.webview.close();
+        let _ = session.webview.destroy();
     } else if let Some(window) = app.get_webview_window("trae-login") {
-        let _ = window.close();
+        let _ = window.destroy();
     }
     Ok(())
 }
@@ -1026,7 +1032,7 @@ async fn switch_account(account_id: String, force: Option<bool>, state: State<'_
     {
         let mut manager = state.account_manager.lock().await;
         let force = force.unwrap_or(false);
-        manager.switch_account(&account_id, force).map_err(ApiError::from)?;
+        manager.switch_account(&account_id, force).await.map_err(ApiError::from)?;
     }
 
     let settings = state.settings.lock().await.clone();
@@ -1351,10 +1357,16 @@ async fn scan_trae_path() -> Result<String> {
 /// 检查更新
 #[tauri::command]
 async fn check_update(app: AppHandle) -> Result<Option<serde_json::Value>> {
-    let updater = app.updater().map_err(|e| ApiError::from(anyhow::anyhow!("获取更新器失败: {}", e)))?;
+    let updater = app.updater().map_err(|e| {
+        println!("[ERROR] 获取更新器失败: {}", e);
+        ApiError::from(anyhow::anyhow!("获取更新器失败: {}", e))
+    })?;
+    
+    println!("[INFO] 正在检查更新...");
     
     match updater.check().await {
         Ok(Some(update)) => {
+            println!("[INFO] 发现新版本: {}", update.version);
             let info = serde_json::json!({
                 "version": update.version,
                 "current_version": update.current_version,
@@ -1363,8 +1375,14 @@ async fn check_update(app: AppHandle) -> Result<Option<serde_json::Value>> {
             });
             Ok(Some(info))
         }
-        Ok(None) => Ok(None),
-        Err(e) => Err(ApiError::from(anyhow::anyhow!("检查更新失败: {}", e)))
+        Ok(None) => {
+            println!("[INFO] 当前已是最新版本");
+            Ok(None)
+        }
+        Err(e) => {
+            println!("[ERROR] 检查更新失败: {}", e);
+            Err(ApiError::from(anyhow::anyhow!("检查更新失败: {}", e)))
+        }
     }
 }
 
@@ -1388,8 +1406,16 @@ async fn open_pricing(account_id: String, app: AppHandle, state: State<'_, AppSt
         manager.get_account(&account_id).map_err(ApiError::from)?
     };
 
+    // 如果窗口已存在，先关闭它
     if let Some(existing) = app.get_webview_window("trae-pricing") {
-        let _ = existing.close();
+        // 使用 destroy 强制销毁窗口
+        let _ = existing.destroy();
+        // 等待窗口完全销毁
+        tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+    }
+    // 再次检查确保窗口已关闭
+    if app.get_webview_window("trae-pricing").is_some() {
+        return Err(anyhow::anyhow!("无法关闭已存在的购买窗口，请重启应用后重试").into());
     }
 
     let cookies = account.cookies.clone();

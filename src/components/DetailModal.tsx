@@ -15,9 +15,10 @@ interface DetailModalProps {
   } | null;
   usage: UsageSummary | null;
   onUpdateCredentials: (accountId: string, updates: { email?: string; password?: string }) => Promise<void>;
+  onToast?: (type: "success" | "error" | "warning" | "info", message: string, duration?: number) => void;
 }
 
-export function DetailModal({ isOpen, onClose, account, usage, onUpdateCredentials }: DetailModalProps) {
+export function DetailModal({ isOpen, onClose, account, usage, onUpdateCredentials, onToast }: DetailModalProps) {
   if (!isOpen || !account) return null;
   const [showPassword, setShowPassword] = useState(false);
   const [editingField, setEditingField] = useState<"email" | "password" | null>(null);
@@ -119,6 +120,19 @@ export function DetailModal({ isOpen, onClose, account, usage, onUpdateCredentia
     </svg>
   );
 
+  const CopyIcon = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+    </svg>
+  );
+
+  const handleCopy = (text: string, label: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      onToast?.("success", `已复制${label}`, 2000);
+    });
+  };
+
   return (
     <div className="modal-overlay" onClick={handleClose}>
       <div className="modal-content detail-modal" onClick={(e) => e.stopPropagation()}>
@@ -141,7 +155,38 @@ export function DetailModal({ isOpen, onClose, account, usage, onUpdateCredentia
           </h3>
           <div className="detail-row">
             <span className="detail-label">用户名</span>
-            <span className="detail-value">{account.name}</span>
+            <span className="detail-value" style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end' }}>
+              {account.name}
+              <button
+                type="button"
+                onClick={() => handleCopy(account.name, "用户名")}
+                title="复制用户名"
+                style={{
+                  width: '24px',
+                  height: '24px',
+                  padding: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '4px',
+                  border: 'none',
+                  background: 'transparent',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--bg-hover)';
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = 'var(--text-muted)';
+                }}
+              >
+                <CopyIcon />
+              </button>
+            </span>
           </div>
           <div className="detail-row" style={{ alignItems: 'center' }}>
             <span className="detail-label">邮箱</span>
@@ -235,7 +280,40 @@ export function DetailModal({ isOpen, onClose, account, usage, onUpdateCredentia
                   </div>
                 </div>
               ) : (
-                account.email || "-"
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end' }}>
+                  {account.email || "-"}
+                  {account.email && (
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(account.email, "邮箱")}
+                      title="复制邮箱"
+                      style={{
+                        width: '24px',
+                        height: '24px',
+                        padding: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '4px',
+                        border: 'none',
+                        background: 'transparent',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--bg-hover)';
+                        e.currentTarget.style.color = 'var(--text-primary)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = 'var(--text-muted)';
+                      }}
+                    >
+                      <CopyIcon />
+                    </button>
+                  )}
+                </div>
               )}
             </span>
           </div>
@@ -355,15 +433,46 @@ export function DetailModal({ isOpen, onClose, account, usage, onUpdateCredentia
                     {account.password ? (showPassword ? account.password : "••••••••") : "-"}
                   </span>
                   {account.password && (
-                    <button
-                      type="button"
-                      className="password-toggle"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      aria-label={showPassword ? "隐藏密码" : "显示密码"}
-                      style={{ display: 'flex', alignItems: 'center' }}
-                    >
-                      {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        className="password-toggle"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        aria-label={showPassword ? "隐藏密码" : "显示密码"}
+                        style={{ display: 'flex', alignItems: 'center' }}
+                      >
+                        {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(account.password || "", "密码")}
+                        title="复制密码"
+                        style={{
+                          width: '24px',
+                          height: '24px',
+                          padding: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '4px',
+                          border: 'none',
+                          background: 'transparent',
+                          color: 'var(--text-muted)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'var(--bg-hover)';
+                          e.currentTarget.style.color = 'var(--text-primary)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.color = 'var(--text-muted)';
+                        }}
+                      >
+                        <CopyIcon />
+                      </button>
+                    </>
                   )}
                 </div>
               )}

@@ -13,6 +13,7 @@ use std::sync::Mutex as StdMutex;
 use crate::{
     emit_quick_register_notice,
     mail_client::{wait_for_verification_code, MailClient, generate_password},
+    api::{TraeApiClient, login_with_email},
     Account, AppState, ApiError,
 };
 
@@ -91,9 +92,14 @@ pub async fn quick_register_simple(
         });
     tokio::spawn(server);
 
-    // 创建浏览器窗口
+    // 创建浏览器窗口，先关闭已存在的
     if let Some(existing) = app.get_webview_window("trae-register") {
-        let _ = existing.close();
+        let _ = existing.destroy();
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    }
+    // 再次检查确保窗口已关闭
+    if app.get_webview_window("trae-register").is_some() {
+        return Err(anyhow::anyhow!("无法关闭已存在的注册窗口，请重启应用后重试").into());
     }
 
     // 准备 Token 拦截脚本（在页面创建时就注入）
@@ -119,7 +125,12 @@ pub async fn quick_register_simple(
             
             var parseToken = function(data) {{
                 if (!data) return null;
-                return data.result?.token || data.result?.Token || data.data?.token || data.data?.Token || data.token || data.Token || null;
+                var token = data.result?.token || data.result?.Token || data.data?.token || data.data?.Token || data.token || data.Token || null;
+                // 只返回 JWT 格式的 Token（包含两个点号）
+                if (token && token.split('.').length === 3) {{
+                    return token;
+                }}
+                return null;
             }};
             
             // 拦截所有请求并记录
@@ -273,11 +284,10 @@ pub async fn quick_register_simple(
         }
     }
 
-    // 等待验证码邮件
+    // 等待验证码邮件（验证码有效期短，要尽快获取并填入）
     println!("[quick-register-simple] 等待验证码邮件...");
-    tokio::time::sleep(Duration::from_secs(2)).await;
     
-    let code = match wait_for_verification_code(&mail_client, Duration::from_secs(60)).await {
+    let code = match wait_for_verification_code(&mail_client, &email, Duration::from_secs(60)).await {
         Ok(code) => code,
         Err(err) => {
             let _ = webview.close();
@@ -286,57 +296,45 @@ pub async fn quick_register_simple(
     };
     
     println!("[quick-register-simple] ✅ 获取验证码: {}", code);
-
-    // 填入验证码、密码并点击注册
-    println!("[quick-register-simple] 填入验证码、密码并点击注册...");
+    
+    // ⚠️ 验证码有效期很短，立即填入并提交
+    println!("[quick-register-simple] 🚀 立即填入验证码并提交...");
     let code_escaped = code.replace("\"", "\\\"");
     let password_escaped = password.replace("\"", "\\\"");
     
-    for i in 1..=5 {
-        tokio::time::sleep(Duration::from_millis(200)).await;
-        
-        // 填入验证码
-        let fill_code_script = format!(
-            r#"(function() {{
-                var input = document.querySelector('input[placeholder*="Verification"]') || document.querySelector('input[maxlength="6"]');
-                if (input) {{
-                    input.value = "{}";
-                    input.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                    input.dispatchEvent(new Event('change', {{ bubbles: true }}));
+    // 一次性填入所有信息并点击注册
+    let fill_and_submit_script = format!(
+        r#"(function() {{
+            // 填入验证码
+            var codeInput = document.querySelector('input[placeholder*="Verification"]') || document.querySelector('input[maxlength="6"]');
+            if (codeInput) {{
+                codeInput.value = "{}";
+                codeInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                codeInput.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                console.log('[AutoFill] 验证码已填入');
+            }}
+            
+            // 填入密码
+            var passInput = document.querySelector('input[type="password"]');
+            if (passInput) {{
+                passInput.value = "{}";
+                passInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                passInput.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                console.log('[AutoFill] 密码已填入');
+            }}
+            
+            // 延迟点击注册按钮，确保表单已更新
+            setTimeout(function() {{
+                var btn = document.querySelector('.btn-submit') || document.querySelector('.trae__btn');
+                if (btn) {{
+                    btn.click();
+                    console.log('[AutoFill] Sign Up 已点击');
                 }}
-            }})()"#,
-            code_escaped
-        );
-        let _ = webview.eval(fill_code_script);
-        
-        // 填入密码
-        let fill_pass_script = format!(
-            r#"(function() {{
-                var input = document.querySelector('input[type="password"]');
-                if (input) {{
-                    input.value = "{}";
-                    input.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                    input.dispatchEvent(new Event('change', {{ bubbles: true }}));
-                }}
-            }})()"#,
-            password_escaped
-        );
-        let _ = webview.eval(fill_pass_script);
-        
-        // 点击注册按钮
-        if i >= 3 {
-            let click_script = r#"
-                (function() {
-                    var btn = document.querySelector('.btn-submit') || document.querySelector('.trae__btn');
-                    if (btn) {
-                        btn.click();
-                        console.log('[AutoFill] Sign Up 已点击');
-                    }
-                })()
-            "#;
-            let _ = webview.eval(click_script);
-        }
-    }
+            }}, 300);
+        }})()"#,
+        code_escaped, password_escaped
+    );
+    let _ = webview.eval(fill_and_submit_script);
 
     // 等待注册完成
     println!("[quick-register-simple] 等待注册完成...");
@@ -407,10 +405,13 @@ pub async fn quick_register_simple(
     println!("[quick-register-simple] 保存账号...");
     let mut manager = state.account_manager.lock().await;
     
-    let mut account = if let Some(token) = token {
-        // 有 Token，使用 Token 添加账号
-        println!("[quick-register-simple] 使用 Token 添加账号...");
-        match manager.add_account_by_token(token, Some(cookies), Some(password)).await {
+    // 检查 Token 是否是 JWT 格式（包含两个点号）
+    let is_jwt = token.as_ref().map(|t| t.split('.').count() == 3).unwrap_or(false);
+    
+    let mut account = if is_jwt {
+        // 有 JWT Token，使用 Token 添加账号
+        println!("[quick-register-simple] 使用 JWT Token 添加账号...");
+        match manager.add_account_by_token(token.unwrap(), Some(cookies), Some(password.clone())).await {
             Ok(acc) => {
                 println!("[quick-register-simple] ✅ 账号添加成功: user_id={}", acc.user_id);
                 acc
@@ -421,23 +422,67 @@ pub async fn quick_register_simple(
             }
         }
     } else {
-        // 没有 Token，但有 Cookies，尝试使用 add_account
-        println!("[quick-register-simple] 使用 Cookies 添加账号...");
-        if cookies.is_empty() {
-            return Err(ApiError::from(anyhow!("未能获取 Token 或 Cookies")));
+        // 没有 JWT Token，使用邮箱和密码登录获取 Token
+        println!("[quick-register-simple] 浏览器未捕获 JWT Token，使用邮箱密码登录...");
+        println!("[quick-register-simple] 邮箱: {}, 密码: {}******", email, &password[..3]);
+        
+        // 等待几秒确保账号已创建，最多重试3次
+        let mut last_error = String::new();
+        let mut account = None;
+        
+        for attempt in 0..3 {
+            if attempt > 0 {
+                println!("[quick-register-simple] 第 {} 次尝试登录...", attempt + 1);
+            }
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            
+            match login_with_email(&email, &password).await {
+                Ok(login_result) => {
+                    println!("[quick-register-simple] ✅ 邮箱登录成功，获取到 Token");
+                    match manager.add_account_by_token(
+                        login_result.token, 
+                        Some(login_result.cookies), 
+                        Some(password.clone())
+                    ).await {
+                        Ok(acc) => {
+                            println!("[quick-register-simple] ✅ 账号添加成功: user_id={}", acc.user_id);
+                            account = Some(acc);
+                            break;
+                        }
+                        Err(e) => {
+                            println!("[quick-register-simple] ❌ 使用 Token 添加账号失败: {}", e);
+                            return Err(ApiError::from(e));
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!("[quick-register-simple] ❌ 第 {} 次邮箱登录失败: {}", attempt + 1, e);
+                    last_error = e.to_string();
+                    // 继续下一次重试
+                }
+            }
         }
         
-        // 使用 add_account 方法（它会通过 cookies 获取 token 和用户信息）
-        match manager.add_account(cookies, Some(password)).await {
-            Ok(acc) => {
-                println!("[quick-register-simple] ✅ 账号添加成功: user_id={}", acc.user_id);
-                acc
-            }
-            Err(e) => {
-                println!("[quick-register-simple] ❌ 使用 Cookies 添加账号失败: {}", e);
-                return Err(ApiError::from(e));
+        // 如果邮箱登录都失败了，尝试使用 Cookies
+        if account.is_none() {
+            if !cookies.is_empty() {
+                println!("[quick-register-simple] 邮箱登录失败，尝试使用 Cookies 添加账号...");
+                match manager.add_account(cookies, Some(password.clone())).await {
+                    Ok(acc) => {
+                        println!("[quick-register-simple] ✅ 使用 Cookies 添加账号成功: user_id={}", acc.user_id);
+                        account = Some(acc);
+                    }
+                    Err(e2) => {
+                        println!("[quick-register-simple] ❌ 使用 Cookies 也失败: {}", e2);
+                        return Err(ApiError::from(anyhow!("登录失败: {}，且 Cookies 也无效: {}", last_error, e2)));
+                    }
+                }
+            } else {
+                return Err(ApiError::from(anyhow!("登录失败: {}", last_error)));
             }
         }
+        
+        account.unwrap()
     };
 
     // 更新邮箱

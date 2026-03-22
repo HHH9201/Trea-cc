@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Trae账号管理",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "identifier": "com.hhj.trae-cc",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -25,7 +25,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": "nsis",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -38,7 +38,7 @@
     "updater": {
       "active": true,
       "endpoints": [
-        "https://github.com/HHH9201/Trae-CC/releases/latest/download/latest.json"
+        "https://api.github.com/repos/HHH9201/Trea-cc/releases/latest"
       ],
       "dialog": false,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhCNjlFQzc0NTU1NEU2NjgKUldSbzVsUlZkT3hwaTRZQldDVkE2bjV6b3ZwUzdyZ2dOTnM0L09iUzlIbm5DRndMRTVhNFoyNTEK"

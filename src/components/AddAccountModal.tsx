@@ -8,9 +8,12 @@ interface AddAccountModalProps {
   onToast?: (type: "success" | "error" | "warning" | "info", message: string) => void;
   onAccountAdded?: (account: Account) => void;
   quickRegisterShowWindow?: boolean;
+  onImportAccounts?: () => void;
+  onExportAccounts?: () => void;
+  canExport?: boolean;
 }
 
-type AddMode = "trae-ide" | "browser" | "register";
+type AddMode = "trae-ide" | "browser" | "register" | "import-export";
 
 // 注册进度步骤
 const REGISTER_STEPS = [
@@ -31,6 +34,9 @@ export function AddAccountModal({
   onToast,
   onAccountAdded,
   quickRegisterShowWindow = true,
+  onImportAccounts,
+  onExportAccounts,
+  canExport = false,
 }: AddAccountModalProps) {
   const [mode, setMode] = useState<AddMode>("trae-ide");
   const [browserStarted, setBrowserStarted] = useState(false);
@@ -172,12 +178,17 @@ export function AddAccountModal({
       setRegisterProgress(100);
       setRegisterStatus("注册完成!");
       
+      console.log("[QuickRegister] 注册成功，账号:", account);
+      
       // 先通知父组件添加账号
       onAccountAdded?.(account);
       
       // 延迟关闭弹窗，让用户看到完成状态
       setTimeout(() => {
-        handleClose();
+        // 重置状态并关闭
+        setLoading(false);
+        stopProgressSimulation();
+        onClose();
         // 显示成功提示
         onToast?.("success", `注册成功，已导入账号: ${account.email}`);
       }, 800);
@@ -199,10 +210,33 @@ export function AddAccountModal({
     onClose();
   };
 
+  const handleImport = () => {
+    onImportAccounts?.();
+    handleClose();
+  };
+
+  const handleExport = () => {
+    onExportAccounts?.();
+    handleClose();
+  };
+
   return (
     <div className="modal-overlay" onClick={handleClose}>
       <div className="modal-content add-account-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>添加账号</h2>
+        <div className="add-account-header">
+          <h2>添加账号</h2>
+          <button
+            className="quick-register-btn"
+            onClick={() => setMode("register")}
+            disabled={loading}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 5v14" />
+              <path d="M5 12h14" />
+            </svg>
+            快速注册
+          </button>
+        </div>
 
         <div className="add-mode-tabs">
           <button
@@ -230,15 +264,16 @@ export function AddAccountModal({
             浏览器登录
           </button>
           <button
-            className={`mode-tab ${mode === "register" ? "active" : ""}`}
-            onClick={() => setMode("register")}
+            className={`mode-tab ${mode === "import-export" ? "active" : ""}`}
+            onClick={() => setMode("import-export")}
             disabled={loading}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 5v14" />
-              <path d="M5 12h14" />
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            快速注册
+            导入/导出
           </button>
         </div>
 
@@ -304,7 +339,7 @@ export function AddAccountModal({
               )}
             </div>
           </div>
-        ) : (
+        ) : mode === "register" ? (
           <div className="trae-ide-mode">
             <div className="mode-description">
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -339,6 +374,36 @@ export function AddAccountModal({
               </button>
               <button type="button" className="primary" onClick={handleQuickRegister} disabled={loading}>
                 {loading ? "注册中..." : "快速注册并导入"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="trae-ide-mode">
+            <div className="mode-description">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <h3>导入/导出账号</h3>
+              <p>从文件导入账号或导出所有账号到文件</p>
+            </div>
+
+            <div className="modal-actions import-export-actions">
+              <button type="button" onClick={handleClose}>
+                取消
+              </button>
+              <button type="button" className="primary" onClick={handleImport}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginRight: '6px'}}>
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                </svg>
+                导入账号
+              </button>
+              <button type="button" className="primary" onClick={handleExport} disabled={!canExport}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginRight: '6px'}}>
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                </svg>
+                导出账号
               </button>
             </div>
           </div>
