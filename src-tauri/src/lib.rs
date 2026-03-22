@@ -1026,7 +1026,7 @@ async fn switch_account(account_id: String, force: Option<bool>, state: State<'_
     {
         let mut manager = state.account_manager.lock().await;
         let force = force.unwrap_or(false);
-        manager.switch_account(&account_id, force).map_err(ApiError::from)?;
+        manager.switch_account(&account_id, force).await.map_err(ApiError::from)?;
     }
 
     let settings = state.settings.lock().await.clone();
@@ -1351,10 +1351,16 @@ async fn scan_trae_path() -> Result<String> {
 /// 检查更新
 #[tauri::command]
 async fn check_update(app: AppHandle) -> Result<Option<serde_json::Value>> {
-    let updater = app.updater().map_err(|e| ApiError::from(anyhow::anyhow!("获取更新器失败: {}", e)))?;
+    let updater = app.updater().map_err(|e| {
+        println!("[ERROR] 获取更新器失败: {}", e);
+        ApiError::from(anyhow::anyhow!("获取更新器失败: {}", e))
+    })?;
+    
+    println!("[INFO] 正在检查更新...");
     
     match updater.check().await {
         Ok(Some(update)) => {
+            println!("[INFO] 发现新版本: {}", update.version);
             let info = serde_json::json!({
                 "version": update.version,
                 "current_version": update.current_version,
@@ -1363,8 +1369,14 @@ async fn check_update(app: AppHandle) -> Result<Option<serde_json::Value>> {
             });
             Ok(Some(info))
         }
-        Ok(None) => Ok(None),
-        Err(e) => Err(ApiError::from(anyhow::anyhow!("检查更新失败: {}", e)))
+        Ok(None) => {
+            println!("[INFO] 当前已是最新版本");
+            Ok(None)
+        }
+        Err(e) => {
+            println!("[ERROR] 检查更新失败: {}", e);
+            Err(ApiError::from(anyhow::anyhow!("检查更新失败: {}", e)))
+        }
     }
 }
 

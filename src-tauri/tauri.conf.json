@@ -38,7 +38,7 @@
     "updater": {
       "active": true,
       "endpoints": [
-        "https://github.com/HHH9201/Trae-CC/releases/latest/download/latest.json"
+        "https://api.github.com/repos/HHH9201/Trae-CC/releases/latest"
       ],
       "dialog": false,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhCNjlFQzc0NTU1NEU2NjgKUldSbzVsUlZkT3hwaTRZQldDVkE2bjV6b3ZwUzdyZ2dOTnM0L09iUzlIbm5DRndMRTVhNFoyNTEK"
